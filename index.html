@@ -1,0 +1,819 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Have we got enough?</title>
+<style>
+  :root {
+    --navy: #30459e;
+    --aqua: #24a9e1;
+    --crimson: #c34d55;
+    --text: #1c2238;
+    --tag: #ffd967;
+    --tag-edge: #c19400;
+    --soft-border: #e5eaf5;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { width: 100%; height: 100%; }
+  body {
+    font-family: 'Arial Rounded MT Bold', 'Nunito', Arial, sans-serif;
+    background: var(--navy);
+    height: 100dvh;
+    overflow: hidden;
+    padding: 8px;
+    color: var(--text);
+    user-select: none;
+    -webkit-user-select: none;
+  }
+  button { font-family: inherit; cursor: pointer; }
+  img { -webkit-user-drag: none; }
+
+  /* The white inner card creates the navy "frame" effect */
+  .frame {
+    height: 100%;
+    background: white;
+    border-radius: 14px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* HEADER */
+  .hdr {
+    background: var(--navy);
+    padding: 6px 14px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    height: clamp(60px, 8.5vh, 78px);
+    flex-shrink: 0;
+    border-bottom: 2px solid rgba(255,255,255,0.14);
+  }
+  .hdr-logo {
+    height: clamp(48px, 7.2vh, 68px);
+    width: auto;
+    object-fit: contain;
+    flex-shrink: 0;
+  }
+  .hdr-title {
+    color: white;
+    font-size: clamp(13px, 1.6vw, 18px);
+    flex: 1;
+    text-align: center;
+    line-height: 1.15;
+  }
+  .home-btn {
+    background: rgba(255,255,255,0.16);
+    color: white; border: none;
+    border-radius: 8px;
+    padding: 6px 14px;
+    font-size: clamp(11px, 1.2vw, 14px);
+    font-weight: 700;
+    transition: background 0.15s;
+    white-space: nowrap;
+    visibility: hidden;
+  }
+  .home-btn.show { visibility: visible; }
+  .home-btn:hover { background: rgba(255,255,255,0.3); }
+
+  /* CONTENT AREA */
+  .content {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    padding: clamp(8px, 1.5vh, 16px) clamp(12px, 2vw, 24px);
+    overflow: hidden;
+  }
+
+  .scene-tag {
+    align-self: center;
+    background: rgba(48,69,158,0.1);
+    color: var(--navy);
+    padding: 3px 14px;
+    border-radius: 999px;
+    font-size: clamp(11px, 1.2vw, 14px);
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    margin-bottom: clamp(6px, 0.8vh, 10px);
+    flex-shrink: 0;
+  }
+
+  .scenario-text {
+    background: white;
+    border: 2px solid var(--navy);
+    border-radius: 12px;
+    padding: clamp(10px, 1.4vh, 14px) clamp(14px, 2vw, 22px);
+    font-size: clamp(15px, 1.65vw, 19px);
+    line-height: 1.4;
+    text-align: center;
+    margin-bottom: clamp(8px, 1.2vh, 14px);
+    flex-shrink: 0;
+  }
+  .scenario-text strong { color: var(--navy); }
+
+  /* PURSE ROW */
+  .purse-row {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: clamp(12px, 2vw, 22px);
+    margin-bottom: clamp(8px, 1.2vh, 14px);
+    flex-shrink: 0;
+    min-height: clamp(72px, 11vh, 100px);
+  }
+  .purse {
+    display: flex;
+    align-items: center;
+    background: white;
+    padding: clamp(6px, 1vh, 10px) clamp(14px, 1.8vw, 22px);
+    border-radius: 14px;
+    border: 3px solid var(--navy);
+    transition: transform 0.15s;
+    position: relative;
+  }
+  .purse::before {
+    content: "You have";
+    position: absolute;
+    top: -11px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--navy);
+    color: white;
+    font-size: clamp(10px, 1.05vw, 12px);
+    font-weight: 700;
+    padding: 2px 11px;
+    border-radius: 999px;
+    letter-spacing: 0.4px;
+  }
+  .purse img {
+    height: clamp(54px, 8vh, 72px);
+    width: auto;
+    pointer-events: none;
+  }
+  .purse.armed {
+    cursor: grab;
+    border-color: var(--aqua);
+    animation: pulse 1.3s infinite;
+  }
+  .purse.armed::before { background: var(--aqua); }
+  .purse.dragging { opacity: 0.55; cursor: grabbing; }
+  @keyframes pulse {
+    0%, 100% {
+      transform: scale(1);
+      box-shadow: 0 0 0 0 rgba(36,169,225,0.55);
+    }
+    50% {
+      transform: scale(1.05);
+      box-shadow: 0 0 0 14px rgba(36,169,225,0);
+    }
+  }
+
+  .drag-prompt {
+    color: var(--aqua);
+    font-weight: 700;
+    font-size: clamp(14px, 1.55vw, 18px);
+    line-height: 1.2;
+    max-width: 230px;
+    animation: pulse-text 1.3s infinite;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .drag-prompt .arrow {
+    font-size: 1.4em;
+    line-height: 1;
+  }
+  @keyframes pulse-text {
+    0%, 100% { opacity: 0.7; transform: scale(0.98); }
+    50% { opacity: 1; transform: scale(1.05); }
+  }
+
+  /* ITEMS */
+  .items {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: clamp(14px, 2.2vw, 26px);
+    flex: 1;
+    min-height: 0;
+    margin-bottom: clamp(6px, 1vh, 12px);
+  }
+  .item-card {
+    background: white;
+    border-radius: 14px;
+    padding: clamp(12px, 1.6vh, 16px) clamp(8px, 1.2vw, 14px);
+    border: 4px solid var(--soft-border);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    position: relative;
+    transition: transform 0.15s, border-color 0.2s, box-shadow 0.15s;
+    min-height: 0;
+  }
+  .item-card.labelled-need { border-color: var(--navy); }
+  .item-card.labelled-want { border-color: var(--aqua); }
+  .item-card.buyable { cursor: pointer; }
+  .item-card.buyable:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 6px 14px rgba(0,0,0,0.12);
+  }
+  .item-card.drop-hover {
+    transform: translateY(-3px);
+    box-shadow: 0 0 0 4px var(--aqua), 0 6px 14px rgba(0,0,0,0.12);
+  }
+
+  .label-badge {
+    position: absolute;
+    top: -14px;
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 5px 18px;
+    border-radius: 999px;
+    color: white;
+    font-weight: 700;
+    font-size: clamp(12px, 1.25vw, 15px);
+    letter-spacing: 1.3px;
+    box-shadow: 0 3px 0 rgba(0,0,0,0.1);
+  }
+  .label-badge.need { background: var(--navy); }
+  .label-badge.want { background: var(--aqua); }
+
+  .item-img-wrap {
+    flex: 1;
+    min-height: 0;
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 4px 0 8px;
+  }
+  .item-img {
+    max-width: 75%;
+    max-height: 100%;
+    object-fit: contain;
+    pointer-events: none;
+  }
+
+  .price-tag {
+    background: var(--tag);
+    color: var(--text);
+    padding: 4px 16px;
+    border-radius: 8px;
+    font-weight: 700;
+    font-size: clamp(15px, 1.6vw, 20px);
+    margin-bottom: clamp(8px, 1vh, 12px);
+    border: 2px dashed var(--tag-edge);
+    transform: rotate(-2deg);
+    flex-shrink: 0;
+  }
+
+  .label-buttons {
+    display: flex;
+    gap: 8px;
+    width: 100%;
+    flex-shrink: 0;
+  }
+  .lbl-btn {
+    flex: 1;
+    padding: clamp(7px, 1.1vh, 11px) 0;
+    border-radius: 10px;
+    border: 3px solid;
+    font-size: clamp(13px, 1.35vw, 16px);
+    font-weight: 700;
+    letter-spacing: 1px;
+    transition: all 0.15s;
+    background: white;
+  }
+  .lbl-btn.need-btn { color: var(--navy); border-color: var(--navy); }
+  .lbl-btn.need-btn:hover, .lbl-btn.need-btn:focus { background: var(--navy); color: white; outline: none; }
+  .lbl-btn.want-btn { color: var(--aqua); border-color: var(--aqua); }
+  .lbl-btn.want-btn:hover, .lbl-btn.want-btn:focus { background: var(--aqua); color: white; outline: none; }
+
+  /* STATUS */
+  .status {
+    text-align: center;
+    font-size: clamp(15px, 1.55vw, 18px);
+    font-weight: 700;
+    flex-shrink: 0;
+    min-height: clamp(28px, 4vh, 38px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* RESULT MODAL */
+  .result-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(28,34,56,0.55);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 16px;
+    z-index: 100;
+    animation: fadeIn 0.2s ease;
+  }
+  @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+  .result-card {
+    background: white;
+    border-radius: 18px;
+    padding: clamp(18px, 2.6vh, 26px) clamp(20px, 3vw, 30px);
+    max-width: 640px;
+    width: 100%;
+    text-align: center;
+    border: 5px solid;
+    max-height: 92vh;
+    overflow-y: auto;
+    animation: pop 0.25s ease;
+  }
+  @keyframes pop {
+    from { transform: scale(0.85); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
+  }
+  .result-card.right { border-color: var(--aqua); }
+  .result-card.wrong { border-color: var(--crimson); }
+
+  .result-title {
+    font-size: clamp(22px, 2.8vw, 30px);
+    font-weight: 700;
+    margin-bottom: 6px;
+  }
+  .result-card.right .result-title { color: var(--aqua); }
+  .result-card.wrong .result-title { color: var(--crimson); }
+
+  .result-bought { font-size: clamp(14px, 1.4vw, 16px); margin: 10px 0 6px; color: #4a4f63; }
+  .result-bought-name { font-size: clamp(16px, 1.7vw, 20px); font-weight: 700; margin-top: 2px; text-transform: capitalize; }
+  .result-bought img {
+    height: clamp(90px, 14vh, 130px);
+    margin: 4px 0;
+    object-fit: contain;
+  }
+
+  .result-change {
+    font-size: clamp(14px, 1.4vw, 17px);
+    margin: 10px 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+  .result-change-label { font-weight: 600; color: #4a4f63; }
+  .result-change img { height: clamp(40px, 6vh, 52px); }
+  .result-change-total { font-weight: 700; font-size: clamp(17px, 1.7vw, 21px); margin-left: 6px; color: var(--navy); }
+
+  .result-message {
+    font-size: clamp(14px, 1.5vw, 18px);
+    line-height: 1.45;
+    margin: 12px 0 4px;
+    padding: 12px 16px;
+    border-radius: 12px;
+  }
+  .result-card.right .result-message { background: rgba(36,169,225,0.1); }
+  .result-card.wrong .result-message { background: rgba(195,77,85,0.1); }
+
+  .btn-primary {
+    background: var(--navy);
+    color: white;
+    border: none;
+    padding: clamp(10px, 1.6vh, 14px) clamp(24px, 4vw, 36px);
+    border-radius: 12px;
+    font-size: clamp(15px, 1.7vw, 19px);
+    font-weight: 700;
+    margin-top: 14px;
+    box-shadow: 0 4px 0 #1f2f72;
+    transition: transform 0.1s, box-shadow 0.1s;
+  }
+  .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 6px 0 #1f2f72; }
+  .btn-primary:active { transform: translateY(2px); box-shadow: 0 2px 0 #1f2f72; }
+
+  /* HOME / END (full panel) */
+  .full-centre {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 20px;
+    gap: clamp(10px, 1.5vh, 18px);
+  }
+  .full-centre h1 {
+    font-size: clamp(28px, 4vw, 44px);
+    color: var(--navy);
+    line-height: 1.1;
+  }
+  .full-centre p {
+    font-size: clamp(15px, 1.7vw, 20px);
+    max-width: 620px;
+    line-height: 1.45;
+  }
+
+  .legend-row {
+    display: flex;
+    gap: 14px;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+  .legend-pill {
+    padding: 5px 16px;
+    border-radius: 999px;
+    color: white;
+    font-weight: 700;
+    letter-spacing: 1px;
+    font-size: clamp(12px, 1.2vw, 14px);
+  }
+  .legend-pill.need { background: var(--navy); }
+  .legend-pill.want { background: var(--aqua); }
+
+  /* shake feedback */
+  @keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    20%, 60% { transform: translateX(-9px); }
+    40%, 80% { transform: translateX(9px); }
+  }
+  .shake { animation: shake 0.4s; }
+
+  /* Mobile (allow scroll) */
+  @media (max-width: 640px) {
+    body { overflow-y: auto; height: auto; min-height: 100dvh; }
+    .frame { height: auto; min-height: calc(100dvh - 16px); }
+    .items { grid-template-columns: 1fr; }
+    .item-img-wrap { height: 180px; flex: none; }
+    .purse-row { flex-direction: column; gap: 10px; }
+    .drag-prompt { max-width: none; text-align: center; }
+  }
+  @media (max-height: 580px) and (min-width: 641px) {
+    body { overflow-y: auto; height: auto; min-height: 100dvh; }
+    .frame { height: auto; min-height: calc(100dvh - 16px); }
+  }
+</style>
+</head>
+<body>
+  <div class="frame">
+    <div class="hdr">
+      <img class="hdr-logo" src="Tykeoons-logo.png" alt="Tykeoons">
+      <div class="hdr-title">MoneySmarts Year 1 &nbsp;·&nbsp; Have we got enough?</div>
+      <button class="home-btn" id="home-btn" onclick="goHome()">Home</button>
+    </div>
+    <div id="app" style="flex:1; display:flex; flex-direction:column; min-height:0;"></div>
+  </div>
+
+<script>
+  // ---------------- DATA ----------------
+  const ITEMS = 'Items for Interactive/';
+  const COINS = '../../GBP/';
+  const SOUNDS = '../../';
+
+  const SCENARIOS = [
+    {
+      text: "You have <strong>50p</strong>. Your pencil snapped in half today and you've got school tomorrow. You see a new pencil and your favourite superheroes notepad.",
+      money: 50,
+      coin: '50p.png',
+      need: { name: 'pencil', img: '../../Items and Price Tags/Pencil.001.png', price: 40 },
+      want: { name: 'superheroes notepad', img: ITEMS + 'Superheroes Notepad.png', price: 30 },
+      rightMsg: "Well done — you needed the pencil for school tomorrow.",
+      wrongMsg: "Oops! You've got a cool notepad, but you've got nothing to write with at school tomorrow!"
+    },
+    {
+      text: "You have <strong>£1</strong>. It's your best friend's birthday party in an hour. You see a birthday card and a giant rainbow swirl lollipop — your favourite sweet, but one your friend can't stand.",
+      money: 100,
+      coin: '£1.png',
+      need: { name: 'birthday card', img: ITEMS + 'Birthday Card.001.png', price: 70 },
+      want: { name: 'lollipop', img: ITEMS + 'Rainbow Lollipop.001.png', price: 50 },
+      rightMsg: "Well done — you'll arrive at the party with a card for your best friend.",
+      wrongMsg: "Oh no! You'll turn up to the party with a lollipop your friend doesn't even like — and no card for them!"
+    },
+    {
+      text: "You have <strong>£1</strong>. It's the hottest day of summer. You've been running around at the park and your throat feels really dry. You see a bottle of water and the brand-new issue of your favourite comic.",
+      money: 100,
+      coin: '£1.png',
+      need: { name: 'water', img: ITEMS + 'Water bottle.png', price: 60 },
+      want: { name: 'comic', img: ITEMS + 'Comic.png', price: 50 },
+      rightMsg: "Well done — your body needed the water on a hot day like this.",
+      wrongMsg: "Oops! You've got a great comic, but you're still really thirsty in this heat."
+    },
+    {
+      text: "You have <strong>50p</strong>. You fell off your scooter and your knee is bleeding a little. You see a packet of plasters and a brilliant light-up yo-yo.",
+      money: 50,
+      coin: '50p.png',
+      need: { name: 'plasters', img: ITEMS + 'Plasters Box.png', price: 30 },
+      want: { name: 'light-up yo-yo', img: ITEMS + 'Light-up yo-yo.001.png', price: 40 },
+      rightMsg: "Well done — now you can put a plaster on so the cut stays clean.",
+      wrongMsg: "Oops! You've got a cool yo-yo, but your knee is still bleeding and could get infected."
+    },
+    {
+      text: "You have <strong>£1</strong>. It's snowing and your hands are bright red and aching with cold. You've still got a long walk home. You see a pair of gloves and a shiny pack of football stickers (you only need two more for the album!).",
+      money: 100,
+      coin: '£1.png',
+      need: { name: 'gloves', img: ITEMS + 'Childrens Gloves.001.png', price: 70 },
+      want: { name: 'football stickers', img: ITEMS + 'Pack of football stickers.png', price: 50 },
+      rightMsg: "Well done — your hands will warm up nicely for the long walk home.",
+      wrongMsg: "Oops! You've got cool stickers, but your hands are still freezing for the long walk home."
+    }
+  ];
+
+  // ---------------- STATE ----------------
+  const state = {
+    screen: 'home',
+    idx: 0,
+    phase: 'spot',
+    labels: { need: null, want: null },
+    choice: null
+  };
+
+  // ---------------- HELPERS ----------------
+  function play(file) {
+    try {
+      const a = new Audio(SOUNDS + file);
+      a.volume = 0.55;
+      a.play().catch(function(){});
+    } catch (e) {}
+  }
+
+  function fmtP(p) {
+    if (p >= 100) {
+      const pounds = Math.floor(p / 100);
+      const rem = p % 100;
+      return rem ? '£' + pounds + '.' + String(rem).padStart(2, '0') : '£' + pounds;
+    }
+    return p + 'p';
+  }
+
+  function makeChange(p) {
+    const denoms = [
+      { v: 100, f: '£1.png' },
+      { v: 50,  f: '50p.png' },
+      { v: 20,  f: '20p.png' },
+      { v: 10,  f: '10p.png' },
+      { v: 5,   f: '5p.png' },
+      { v: 2,   f: '2p.png' },
+      { v: 1,   f: '1p.png' }
+    ];
+    let r = p;
+    const out = [];
+    for (const c of denoms) {
+      while (r >= c.v) { out.push(c.f); r -= c.v; }
+    }
+    return out;
+  }
+
+  function positionsFor(idx) {
+    return idx % 2 === 0 ? ['need', 'want'] : ['want', 'need'];
+  }
+
+  function showHomeBtn(show) {
+    const b = document.getElementById('home-btn');
+    if (b) b.classList.toggle('show', !!show);
+  }
+
+  // ---------------- RENDER: HOME ----------------
+  function renderHome() {
+    showHomeBtn(false);
+    document.getElementById('app').innerHTML =
+      '<div class="full-centre">' +
+        '<h1>Have we got enough?</h1>' +
+        '<p>For each scene, work out which item is a ' +
+          '<strong style="color:var(--navy)">NEED</strong> and which is a ' +
+          '<strong style="color:var(--aqua)">WANT</strong>.</p>' +
+        '<p>Then decide what to buy — and check what change you\'ll get.</p>' +
+        '<div class="legend-row">' +
+          '<span class="legend-pill need">NEED</span>' +
+          '<span class="legend-pill want">WANT</span>' +
+        '</div>' +
+        '<button class="btn-primary" onclick="start()">Let\'s go!</button>' +
+      '</div>';
+  }
+
+  // ---------------- RENDER: SCENARIO ----------------
+  function renderScenario() {
+    showHomeBtn(true);
+    const sc = SCENARIOS[state.idx];
+    const pos = positionsFor(state.idx);
+
+    function itemHTML(slot) {
+      const item = sc[slot];
+      const labelled = state.labels[slot];
+
+      let badge = '';
+      if (labelled === 'NEED') badge = '<div class="label-badge need">NEED</div>';
+      if (labelled === 'WANT') badge = '<div class="label-badge want">WANT</div>';
+
+      let buttons = '';
+      if (state.phase === 'spot' && !labelled) {
+        buttons =
+          '<div class="label-buttons">' +
+            '<button class="lbl-btn need-btn" onclick="tagItem(\'' + slot + '\',\'NEED\')">NEED</button>' +
+            '<button class="lbl-btn want-btn" onclick="tagItem(\'' + slot + '\',\'WANT\')">WANT</button>' +
+          '</div>';
+      }
+
+      const cls = ['item-card'];
+      if (labelled === 'NEED') cls.push('labelled-need');
+      if (labelled === 'WANT') cls.push('labelled-want');
+      if (state.phase === 'decide') cls.push('buyable');
+
+      const onClick = state.phase === 'decide' ? ('onclick="buy(\'' + slot + '\')"') : '';
+      const dropAttrs = state.phase === 'decide'
+        ? ('ondragover="onDragOver(event,this)" ondragleave="onDragLeave(this)" ondrop="onDrop(event,\'' + slot + '\',this)"')
+        : '';
+
+      return (
+        '<div class="' + cls.join(' ') + '" id="item-' + slot + '" ' + onClick + ' ' + dropAttrs + '>' +
+          badge +
+          '<div class="item-img-wrap">' +
+            '<img class="item-img" src="' + encodeURI(item.img) + '" alt="' + item.name + '">' +
+          '</div>' +
+          '<div class="price-tag">' + fmtP(item.price) + '</div>' +
+          buttons +
+        '</div>'
+      );
+    }
+
+    let status = '';
+    if (state.phase === 'spot') {
+      status =
+        '<div class="status">' +
+          'Which is the <strong style="color:var(--navy);margin:0 4px">NEED</strong> ' +
+          'and which is the <strong style="color:var(--aqua);margin:0 4px">WANT</strong>?' +
+        '</div>';
+    } else if (state.phase === 'decide') {
+      status =
+        '<div class="status" style="color:var(--crimson)">' +
+          'There isn\'t enough money for both!' +
+        '</div>';
+    }
+
+    const purseAttrs = state.phase === 'decide'
+      ? 'draggable="true" ondragstart="onDragStart(event,this)" ondragend="onDragEnd(this)"'
+      : '';
+
+    const dragPromptHTML = state.phase === 'decide'
+      ? '<div class="drag-prompt"><span class="arrow">→</span>Drag your money to the item you want to buy!</div>'
+      : '';
+
+    document.getElementById('app').innerHTML =
+      '<div class="content">' +
+        '<div class="scene-tag">Scene ' + (state.idx + 1) + ' of ' + SCENARIOS.length + '</div>' +
+        '<div class="scenario-text">' + sc.text + '</div>' +
+        '<div class="purse-row">' +
+          '<div class="purse ' + (state.phase === 'decide' ? 'armed' : '') + '" id="purse" ' + purseAttrs + '>' +
+            '<img src="' + COINS + encodeURI(sc.coin) + '" alt="">' +
+          '</div>' +
+          dragPromptHTML +
+        '</div>' +
+        '<div class="items">' +
+          itemHTML(pos[0]) +
+          itemHTML(pos[1]) +
+        '</div>' +
+        status +
+      '</div>';
+  }
+
+  // ---------------- INTERACTIONS ----------------
+  function tagItem(slot, label) {
+    const correct = (slot === 'need' && label === 'NEED') ||
+                    (slot === 'want' && label === 'WANT');
+    if (!correct) {
+      play('Wrong.mp3');
+      const el = document.getElementById('item-' + slot);
+      if (el) {
+        el.classList.add('shake');
+        setTimeout(function(){ el.classList.remove('shake'); }, 450);
+      }
+      return;
+    }
+    state.labels[slot] = label;
+    play('Correct.wav');
+
+    if (state.labels.need === 'NEED' && state.labels.want === 'WANT') {
+      renderScenario();
+      setTimeout(function(){
+        state.phase = 'decide';
+        renderScenario();
+      }, 750);
+    } else {
+      renderScenario();
+    }
+  }
+
+  function buy(slot) {
+    if (state.phase !== 'decide') return;
+    state.choice = slot;
+    state.phase = 'result';
+    showResult();
+  }
+
+  function onDragStart(e, el) {
+    e.dataTransfer.setData('text/plain', 'purse');
+    e.dataTransfer.effectAllowed = 'move';
+    el.classList.add('dragging');
+  }
+  function onDragEnd(el) { el.classList.remove('dragging'); }
+  function onDragOver(e, el) {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    el.classList.add('drop-hover');
+  }
+  function onDragLeave(el) { el.classList.remove('drop-hover'); }
+  function onDrop(e, slot, el) {
+    e.preventDefault();
+    el.classList.remove('drop-hover');
+    buy(slot);
+  }
+
+  // ---------------- RESULT ----------------
+  function showResult() {
+    const sc = SCENARIOS[state.idx];
+    const isRight = state.choice === 'need';
+    const bought = sc[state.choice];
+    const change = sc.money - bought.price;
+    const changeCoins = makeChange(change);
+
+    if (isRight) play('Coins.wav'); else play('Wrong.mp3');
+
+    const changeHTML = changeCoins.map(function(c){
+      return '<img src="' + COINS + encodeURI(c) + '" alt="">';
+    }).join('');
+    const isLast = state.idx === SCENARIOS.length - 1;
+    const nextLabel = isLast ? 'Finish' : 'Next scene';
+
+    const overlay = document.createElement('div');
+    overlay.className = 'result-overlay';
+    overlay.innerHTML =
+      '<div class="result-card ' + (isRight ? 'right' : 'wrong') + '">' +
+        '<div class="result-title">' + (isRight ? 'Well done!' : 'Oh no!') + '</div>' +
+        '<div class="result-bought">' +
+          'You bought:' +
+          '<div><img src="' + encodeURI(bought.img) + '" alt="' + bought.name + '"></div>' +
+          '<div class="result-bought-name">' + bought.name + '</div>' +
+        '</div>' +
+        '<div class="result-change">' +
+          '<span class="result-change-label">Your change:</span>' +
+          changeHTML +
+          '<span class="result-change-total">' + fmtP(change) + '</span>' +
+        '</div>' +
+        '<div class="result-message">' +
+          (isRight ? sc.rightMsg : sc.wrongMsg) +
+        '</div>' +
+        '<button class="btn-primary" onclick="nextScene()">' + nextLabel + '</button>' +
+      '</div>';
+    document.body.appendChild(overlay);
+  }
+
+  function nextScene() {
+    document.querySelectorAll('.result-overlay').forEach(function(el){ el.remove(); });
+    if (state.idx === SCENARIOS.length - 1) {
+      state.screen = 'end';
+      renderEnd();
+    } else {
+      state.idx++;
+      startScene();
+    }
+  }
+
+  // ---------------- END ----------------
+  function renderEnd() {
+    showHomeBtn(true);
+    document.getElementById('app').innerHTML =
+      '<div class="full-centre">' +
+        '<h1>You did it!</h1>' +
+        '<p>You worked out the ' +
+          '<strong style="color:var(--navy)">NEED</strong> and the ' +
+          '<strong style="color:var(--aqua)">WANT</strong> in every scene.</p>' +
+        '<p>And when there wasn\'t enough money for both, you knew which one to buy.</p>' +
+        '<div class="legend-row">' +
+          '<span class="legend-pill need">Need first</span>' +
+          '<span class="legend-pill want">Want second</span>' +
+        '</div>' +
+        '<button class="btn-primary" onclick="start()">Play again</button>' +
+      '</div>';
+  }
+
+  // ---------------- FLOW ----------------
+  function start() {
+    state.screen = 'scenario';
+    state.idx = 0;
+    startScene();
+  }
+
+  function startScene() {
+    state.phase = 'spot';
+    state.labels = { need: null, want: null };
+    state.choice = null;
+    renderScenario();
+  }
+
+  function goHome() {
+    document.querySelectorAll('.result-overlay').forEach(function(el){ el.remove(); });
+    state.screen = 'home';
+    state.idx = 0;
+    renderHome();
+  }
+
+  // ---------------- INIT ----------------
+  renderHome();
+</script>
+</body>
+</html>
